@@ -22,9 +22,18 @@ const userSchema = new mongoose.Schema({
     type: String // Manga IDs
   }],
   readingManga: [{
-    type: String, // Manga ID
-    lastChapter: Number,
-    lastReadAt: Date
+    mangaId: {
+      type: String,
+      required: true
+    },
+    lastChapter: {
+      type: Number,
+      required: true
+    },
+    lastReadAt: {
+      type: Date,
+      default: Date.now
+    }
   }],
   createdAt: {
     type: Date,

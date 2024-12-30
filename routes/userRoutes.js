@@ -6,9 +6,11 @@ const User = require('../models/User');
 router.post('/auth/google', async (req, res) => {
   try {
     const { googleId, email, displayName, photoURL } = req.body;
+    console.log('Received auth request:', { googleId, email, displayName, photoURL });
     
     // Tìm user theo googleId
     let user = await User.findOne({ googleId });
+    console.log('Found existing user:', user);
     
     if (!user) {
       // Tạo user mới nếu chưa tồn tại
@@ -21,10 +23,12 @@ router.post('/auth/google', async (req, res) => {
         readingManga: []
       });
       await user.save();
+      console.log('Created new user:', user);
     }
     
     res.json(user);
   } catch (error) {
+    console.error('Auth error:', error);
     res.status(500).json({ message: error.message });
   }
 });
