@@ -33,5 +33,5 @@ mongoose.connection.on('disconnected', () => {
 app.use('/api/users', userRoutes);
 
 app.listen(PORT, () => {
-  console.log(`Server hiện đang chạy tại cổng ${PORT}`);
+  console.log(`Server đang chạy tại cổng ${PORT}`);
 });
