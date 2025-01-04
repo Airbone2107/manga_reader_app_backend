@@ -13,11 +13,11 @@ const PORT = process.env.PORT || 5000;
 const DB_URI = process.env.DB_URI;
 
 // Kết nối MongoDB
-mongoose.connect(DB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(DB_URI)
   .then(() => console.log('Kết nối MongoDB thành công!'))
   .catch(err => {
     console.error('Lỗi kết nối MongoDB:', err);
-    process.exit(1); // Tắt server nếu không thể kết nối DB
+    process.exit(1);
   });
 
 // Thêm error handler
