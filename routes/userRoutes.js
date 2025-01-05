@@ -25,44 +25,51 @@ const authenticateToken = async (req, res, next) => {
 // Sửa route đăng nhập Google
 router.post('/auth/google', async (req, res) => {
   try {
-    const { token } = req.body; // Nhận Google token từ frontend
-    
-    // Xác thực Google token
-    const ticket = await client.verifyIdToken({
-      idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID
-    });
-    
-    const payload = ticket.getPayload();
-    const { sub: googleId, email, name: displayName, picture: photoURL } = payload;
-    
+    const { email, displayName, photoURL, accessToken, idToken } = req.body;
+
+    // Nếu không có idToken, sử dụng accessToken để xác thực
+    if (!idToken && !accessToken) {
+      return res.status(400).json({ message: 'Không có token xác thực' });
+    }
+
+    let userData;
+    if (idToken) {
+      // Xác thực bằng ID token
+      const ticket = await client.verifyIdToken({
+        idToken: idToken,
+        audience: GOOGLE_CLIENT_ID
+      });
+      userData = ticket.getPayload();
+    } else {
+      // Xác thực bằng access token
+      const userInfo = await fetch(
+        'https://www.googleapis.com/oauth2/v2/userinfo',
+        {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        }
+      ).then(res => res.json());
+      userData = userInfo;
+    }
+
     // Tìm hoặc tạo user
-    let user = await User.findOne({ googleId });
+    let user = await User.findOne({ email: userData.email });
     if (!user) {
       user = new User({
-        googleId,
-        email,
-        displayName,
-        photoURL,
-        followingManga: [],
-        readingManga: []
+        googleId: userData.sub || userData.id,
+        email: userData.email,
+        displayName: displayName || userData.name,
+        photoURL: photoURL || userData.picture
       });
       await user.save();
     }
-    
+
     // Tạo JWT token
-    const userToken = jwt.sign(
-      { id: user._id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-    
-    // Lưu token vào database
-    await user.addToken(userToken);
-    
-    res.json({ user, token: userToken });
+    const token = jwt.sign({ userId: user._id }, JWT_SECRET);
+    await user.addToken(token);
+
+    res.json({ user, token });
   } catch (error) {
-    console.error('Auth error:', error);
+    console.error('Google auth error:', error);
     res.status(500).json({ message: error.message });
   }
 });
