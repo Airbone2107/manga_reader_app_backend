@@ -80,7 +80,7 @@ router.post('/auth/google', async (req, res) => {
 });
 
 // Thêm manga vào danh sách theo dõi
-router.get('/following/:userId', authenticateToken, async (req, res) => {
+router.post('/:userId/follow', authenticateToken, async (req, res) => {
   try {
     const { mangaId } = req.query;
     const user = await User.findById(req.params.userId);
@@ -89,6 +89,10 @@ router.get('/following/:userId', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
     }
     
+    if (!mangaId) {
+      return res.status(400).json({ message: 'Thiếu mangaId' });
+    }
+
     if (!user.followingManga.includes(mangaId)) {
       user.followingManga.push(mangaId);
       await user.save();
@@ -96,12 +100,13 @@ router.get('/following/:userId', authenticateToken, async (req, res) => {
     
     res.json(user);
   } catch (error) {
+    console.error('Follow error:', error);
     res.status(500).json({ message: error.message });
   }
 });
 
 // Xóa manga khỏi danh sách theo dõi
-router.delete('/following/:userId', authenticateToken, async (req, res) => {
+router.post('/:userId/unfollow', authenticateToken, async (req, res) => {
   try {
     const { mangaId } = req.query;
     const user = await User.findById(req.params.userId);
@@ -109,24 +114,33 @@ router.delete('/following/:userId', authenticateToken, async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
     }
+
+    if (!mangaId) {
+      return res.status(400).json({ message: 'Thiếu mangaId' });
+    }
     
     user.followingManga = user.followingManga.filter(id => id !== mangaId);
     await user.save();
     
     res.json(user);
   } catch (error) {
+    console.error('Unfollow error:', error);
     res.status(500).json({ message: error.message });
   }
 });
 
 // Cập nhật tiến độ đọc
-router.get('/reading/:userId', authenticateToken, async (req, res) => {
+router.post('/:userId/reading-progress', authenticateToken, async (req, res) => {
   try {
     const { mangaId, lastChapter } = req.query;
     const user = await User.findById(req.params.userId);
     
     if (!user) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+    }
+
+    if (!mangaId || !lastChapter) {
+      return res.status(400).json({ message: 'Thiếu thông tin cần thiết' });
     }
     
     const readingIndex = user.readingManga.findIndex(m => m.mangaId === mangaId);
@@ -148,6 +162,21 @@ router.get('/reading/:userId', authenticateToken, async (req, res) => {
     await user.save();
     res.json(user);
   } catch (error) {
+    console.error('Update reading progress error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Thêm route lấy thông tin user
+router.get('/:userId', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+    }
+    res.json(user);
+  } catch (error) {
+    console.error('Get user error:', error);
     res.status(500).json({ message: error.message });
   }
 });
