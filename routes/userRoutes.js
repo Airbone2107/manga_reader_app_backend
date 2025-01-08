@@ -20,7 +20,7 @@ const authenticateToken = (req, res, next) => {
 
 // Sửa route đăng nhập Google
 router.post('/auth/google', async (req, res) => {
-  const { accessToken, displayName, photoURL } = req.body;
+  const { accessToken } = req.body;
 
   if (!accessToken) {
     return res.status(400).json({ message: 'Không có token xác thực' });
@@ -47,8 +47,8 @@ router.post('/auth/google', async (req, res) => {
       user = new User({
         googleId: id,
         email,
-        displayName: displayName || name,
-        photoURL: photoURL || picture,
+        displayName: name,
+        photoURL: picture,
       });
       await user.save();
     }
@@ -60,10 +60,10 @@ router.post('/auth/google', async (req, res) => {
       { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
     );
 
-    // Lưu token vào cơ sở dữ liệu (nếu cần)
+    // Lưu token vào cơ sở dữ liệu
     await user.addToken(token);
 
-    res.json({ user, token });
+    res.json({ token });
   } catch (error) {
     console.error('Lỗi xác thực Google:', error);
     res.status(401).json({ message: 'Token không hợp lệ' });
@@ -159,7 +159,7 @@ router.post('/:userId/reading-progress', authenticateToken, async (req, res) => 
 });
 
 // Route lấy thông tin người dùng từ token
-router.get('/users', authenticateToken, async (req, res) => {
+router.get('/:users', authenticateToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
     
