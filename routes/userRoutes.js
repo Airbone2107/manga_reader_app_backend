@@ -159,7 +159,7 @@ router.post('/:userId/reading-progress', authenticateToken, async (req, res) => 
 });
 
 // Route lấy thông tin người dùng từ token
-router.get('/:users', authenticateToken, async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
     
