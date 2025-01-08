@@ -206,9 +206,9 @@ router.post('/:userId/reading-progress', authenticateToken, async (req, res) => 
 // Thêm route lấy thông tin user
 router.get('/:userId', authenticateToken, async (req, res) => {
   try {
-    const user = await User.findById(req.params.userId);
-    if (!user) {
-      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+    const tokenExists = user.tokens.some(t => t.token === token);
+    if (!tokenExists) {
+      return res.status(401).json({ message: 'Token không hợp lệ hoặc đã hết hạn' });
     }
     res.json(user);
   } catch (error) {
