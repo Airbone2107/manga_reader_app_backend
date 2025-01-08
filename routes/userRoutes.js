@@ -4,6 +4,7 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const { JWT_SECRET, GOOGLE_CLIENT_ID } = process.env;
+
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Middleware xác thực JWT
@@ -12,26 +13,12 @@ const authenticateToken = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
     
-    if (!token) {
-      return res.status(401).json({ message: 'Không tìm thấy token' });
-    }
+    if (!token) return res.status(401).json({ message: 'Không tìm thấy token' });
     
-    // Xác thực JWT token
-    const decoded = jwt.verify(token, JWT_SECRET);
-    
-    // Kiểm tra xem token có trong danh sách token hợp lệ của user không
-    const user = await User.findById(decoded.userId);
-    if (!user || !user.tokens.includes(token)) {
-      return res.status(401).json({ message: 'Token không hợp lệ hoặc đã hết hạn' });
-    }
-    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
-    req.token = token;
     next();
   } catch (error) {
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ message: 'Token đã hết hạn' });
-    }
     return res.status(403).json({ message: 'Token không hợp lệ' });
   }
 };
@@ -39,14 +26,14 @@ const authenticateToken = async (req, res, next) => {
 // Sửa route đăng nhập Google
 router.post('/auth/google', async (req, res) => {
   try {
-    const { accessToken } = req.body;
+    const { email, displayName, photoURL, accessToken } = req.body;
 
     if (!accessToken) {
       return res.status(400).json({ message: 'Không có token xác thực' });
     }
 
     try {
-      // Xác thực với Google
+      // Xác thực bằng access token
       const response = await fetch(
         'https://www.googleapis.com/oauth2/v2/userinfo',
         {
@@ -66,48 +53,25 @@ router.post('/auth/google', async (req, res) => {
         user = new User({
           googleId: userData.id,
           email: userData.email,
-          displayName: userData.name,
-          photoURL: userData.picture,
-          createdAt: new Date()
+          displayName: displayName || userData.name,
+          photoURL: photoURL || userData.picture
         });
-        await user.save();
-      } else {
-        // Cập nhật thông tin user nếu cần
-        user.displayName = userData.name;
-        user.photoURL = userData.picture;
         await user.save();
       }
 
-      // Tạo JWT token với thời hạn
+      // Tạo JWT token
       const token = jwt.sign(
-        { 
-          userId: user._id,
-          email: user.email 
-        }, 
+        { userId: user._id }, 
         JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
       );
       
-      // Lưu token vào user
       await user.addToken(token);
 
-      // Trả về đầy đủ thông tin
-      res.json({ 
-        token,
-        user: {
-          id: user._id,
-          googleId: user.googleId,
-          email: user.email,
-          displayName: user.displayName,
-          photoURL: user.photoURL,
-          createdAt: user.createdAt,
-          following: user.followingManga,
-          readingProgress: user.readingManga
-        }
-      });
+      res.json({ user, token });
     } catch (error) {
       console.error('Token verification error:', error);
-      res.status(401).json({ message: 'Token Google không hợp lệ' });
+      res.status(401).json({ message: 'Token không hợp lệ' });
     }
   } catch (error) {
     console.error('Google auth error:', error);
@@ -206,9 +170,9 @@ router.post('/:userId/reading-progress', authenticateToken, async (req, res) => 
 // Thêm route lấy thông tin user
 router.get('/:userId', authenticateToken, async (req, res) => {
   try {
-    const tokenExists = user.tokens.some(t => t.token === token);
-    if (!tokenExists) {
-      return res.status(401).json({ message: 'Token không hợp lệ hoặc đã hết hạn' });
+    const user = await User.findById(req.params.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
     }
     res.json(user);
   } catch (error) {
@@ -223,20 +187,6 @@ router.post('/logout', authenticateToken, async (req, res) => {
     const token = req.headers.authorization.split(' ')[1];
     await req.user.removeToken(token);
     res.json({ message: 'Đăng xuất thành công' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Thêm route xác thực token
-router.get('/verify-token', authenticateToken, async (req, res) => {
-  try {
-    // Token hợp lệ (đã qua middleware authenticateToken)
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(401).json({ message: 'Người dùng không tồn tại' });
-    }
-    res.json({ valid: true, user });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

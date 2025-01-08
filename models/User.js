@@ -35,25 +35,34 @@ const userSchema = new mongoose.Schema({
       default: Date.now
     }
   }],
-  tokens: [String], // Mảng chứa các token hợp lệ
+  tokens: [{
+    token: {
+      type: String,
+      required: true
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+      expires: '30d' // Tự động xóa token sau 7 ngày
+    }
+  }],
   createdAt: {
     type: Date,
     default: Date.now
   }
 });
 
-// Thêm phương thức để quản lý token
-userSchema.methods.addToken = function(token) {
-  if (!this.tokens) {
-    this.tokens = [];
-  }
-  this.tokens.push(token);
-  return this.save();
+// Thêm method để quản lý token
+userSchema.methods.addToken = async function(token) {
+  this.tokens = this.tokens || [];
+  this.tokens.push({ token });
+  await this.save();
+  return token;
 };
 
-userSchema.methods.removeToken = function(token) {
-  this.tokens = this.tokens.filter(t => t !== token);
-  return this.save();
+userSchema.methods.removeToken = async function(token) {
+  this.tokens = this.tokens.filter(t => t.token !== token);
+  await this.save();
 };
 
 module.exports = mongoose.model('User', userSchema); 
