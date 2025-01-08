@@ -27,7 +27,7 @@ const userSchema = new mongoose.Schema({
       required: true
     },
     lastChapter: {
-      type: Number,
+      type: String,
       required: true
     },
     lastReadAt: {
