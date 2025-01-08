@@ -4,7 +4,6 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const { JWT_SECRET, GOOGLE_CLIENT_ID } = process.env;
-
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Middleware xác thực JWT
@@ -24,10 +23,9 @@ router.post('/auth/google', async (req, res) => {
   const { accessToken } = req.body;
 
   try {
-    // Xác thực token từ Google
-    const ticket = await client.verifyIdToken({
-      idToken: accessToken,
-      audience: GOOGLE_CLIENT_ID,
+    // Xác thực accessToken từ Google
+    const ticket = await client.verifyAccessToken({
+      access_token: accessToken,
     });
     const payload = ticket.getPayload();
     const userId = payload.sub; // Lấy Google ID làm userId
