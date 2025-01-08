@@ -181,10 +181,10 @@ router.post('/logout', authenticateToken, (req, res) => {
 // API kiểm tra xem người dùng có theo dõi manga không
 router.get('/user/following/:mangaId', authenticateToken, async (req, res) => {
   const { mangaId } = req.params;
-  const userId = req.user.id; // Lấy user ID từ token
+
 
   try {
-    const user = await User.findById(userId);
+    const user = await User.findById(req.user.userId);
 
     if (!user) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
