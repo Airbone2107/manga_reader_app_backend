@@ -73,7 +73,7 @@ router.post('/auth/google', async (req, res) => {
 // Thêm manga vào danh sách theo dõi
 router.post('/:userId/follow', authenticateToken, async (req, res) => {
   try {
-    const { mangaId } = req.query;
+    const { mangaId } = req.body; // Sử dụng req.body thay vì req.query
     const user = await User.findById(req.params.userId);
     
     if (!user) {
@@ -99,7 +99,7 @@ router.post('/:userId/follow', authenticateToken, async (req, res) => {
 // Xóa manga khỏi danh sách theo dõi
 router.post('/:userId/unfollow', authenticateToken, async (req, res) => {
   try {
-    const { mangaId } = req.query;
+    const { mangaId } = req.body; // Sử dụng req.body thay vì req.query
     const user = await User.findById(req.params.userId);
     
     if (!user) {
@@ -123,7 +123,7 @@ router.post('/:userId/unfollow', authenticateToken, async (req, res) => {
 // Cập nhật tiến độ đọc
 router.post('/:userId/reading-progress', authenticateToken, async (req, res) => {
   try {
-    const { mangaId, lastChapter } = req.query;
+    const { mangaId, lastChapter } = req.body; // Sử dụng req.body thay vì req.query
     const user = await User.findById(req.params.userId);
     
     if (!user) {
