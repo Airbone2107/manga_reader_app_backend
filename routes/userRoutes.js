@@ -20,23 +20,53 @@ const authenticateToken = (req, res, next) => {
 
 // Sửa route đăng nhập Google
 router.post('/auth/google', async (req, res) => {
-  const { accessToken } = req.body;
+  const { accessToken, displayName, photoURL } = req.body;
+
+  if (!accessToken) {
+    return res.status(400).json({ message: 'Không có token xác thực' });
+  }
 
   try {
-    // Xác thực accessToken từ Google
-    const ticket = await client.verifyAccessToken({
-      access_token: accessToken,
+    // Xác thực accessToken và lấy thông tin người dùng từ Google
+    const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
     });
-    const payload = ticket.getPayload();
-    const userId = payload.sub; // Lấy Google ID làm userId
+
+    if (!response.ok) {
+      throw new Error('Failed to verify Google token');
+    }
+
+    const userData = await response.json();
+    const { email, id, name, picture } = userData;
+
+    // Tìm hoặc tạo user
+    let user = await User.findOne({ email });
+    if (!user) {
+      user = new User({
+        googleId: id,
+        email,
+        displayName: displayName || name,
+        photoURL: photoURL || picture,
+      });
+      await user.save();
+    }
 
     // Tạo JWT token
-    const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '30d' });
+    const token = jwt.sign(
+      { userId: user._id }, 
+      JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
+    );
 
-    res.json({ userId, token });
+    // Lưu token vào cơ sở dữ liệu (nếu cần)
+    await user.addToken(token);
+
+    res.json({ user, token });
   } catch (error) {
     console.error('Lỗi xác thực Google:', error);
-    res.status(401).json({ message: 'Xác thực Google thất bại' });
+    res.status(401).json({ message: 'Token không hợp lệ' });
   }
 });
 
