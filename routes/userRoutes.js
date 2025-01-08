@@ -179,4 +179,27 @@ router.post('/logout', authenticateToken, (req, res) => {
   res.json({ message: 'Đăng xuất thành công' });
 });
 
+// API kiểm tra xem người dùng có theo dõi manga không
+router.get('/user/following/:mangaId', authenticateToken, async (req, res) => {
+  const { mangaId } = req.params;
+  const userId = req.user.id; // Lấy user ID từ token
+
+  try {
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+    }
+
+    // Kiểm tra xem mangaId có trong danh sách manga đang theo dõi của người dùng không
+    const isFollowing = user.followingManga.includes(mangaId);
+
+    // Trả về true hoặc false
+    res.json(isFollowing); // Trả về true nếu đang theo dõi, false nếu không theo dõi
+  } catch (error) {
+    console.error('Error checking following status:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router; 
