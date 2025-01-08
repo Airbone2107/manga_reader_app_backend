@@ -8,74 +8,37 @@ const { JWT_SECRET, GOOGLE_CLIENT_ID } = process.env;
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Middleware xác thực JWT
-const authenticateToken = async (req, res, next) => {
-  try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    
-    if (!token) return res.status(401).json({ message: 'Không tìm thấy token' });
-    
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+const authenticateToken = (req, res, next) => {
+  const token = req.headers['authorization']?.split(' ')[1];
+  if (!token) return res.status(401).json({ message: 'Token không tìm thấy' });
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ message: 'Token không hợp lệ' });
+    req.user = user; // Lưu thông tin user từ token
     next();
-  } catch (error) {
-    return res.status(403).json({ message: 'Token không hợp lệ' });
-  }
+  });
 };
 
 // Sửa route đăng nhập Google
 router.post('/auth/google', async (req, res) => {
+  const { accessToken } = req.body;
+
   try {
-    const { email, displayName, photoURL, accessToken } = req.body;
+    // Xác thực token từ Google
+    const ticket = await client.verifyIdToken({
+      idToken: accessToken,
+      audience: GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    const userId = payload.sub; // Lấy Google ID làm userId
 
-    if (!accessToken) {
-      return res.status(400).json({ message: 'Không có token xác thực' });
-    }
+    // Tạo JWT token
+    const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '30d' });
 
-    try {
-      // Xác thực bằng access token
-      const response = await fetch(
-        'https://www.googleapis.com/oauth2/v2/userinfo',
-        {
-          headers: { Authorization: `Bearer ${accessToken}` }
-        }
-      );
-      
-      if (!response.ok) {
-        throw new Error('Failed to verify Google token');
-      }
-      
-      const userData = await response.json();
-
-      // Tìm hoặc tạo user
-      let user = await User.findOne({ email: userData.email });
-      if (!user) {
-        user = new User({
-          googleId: userData.id,
-          email: userData.email,
-          displayName: displayName || userData.name,
-          photoURL: photoURL || userData.picture
-        });
-        await user.save();
-      }
-
-      // Tạo JWT token
-      const token = jwt.sign(
-        { userId: user._id }, 
-        JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
-      );
-      
-      await user.addToken(token);
-
-      res.json({ user, token });
-    } catch (error) {
-      console.error('Token verification error:', error);
-      res.status(401).json({ message: 'Token không hợp lệ' });
-    }
+    res.json({ userId, token });
   } catch (error) {
-    console.error('Google auth error:', error);
-    res.status(500).json({ message: error.message });
+    console.error('Lỗi xác thực Google:', error);
+    res.status(401).json({ message: 'Xác thực Google thất bại' });
   }
 });
 
@@ -167,29 +130,14 @@ router.post('/:userId/reading-progress', authenticateToken, async (req, res) => 
   }
 });
 
-// Thêm route lấy thông tin user
-router.get('/:userId', authenticateToken, async (req, res) => {
-  try {
-    const user = await User.findById(req.params.userId);
-    if (!user) {
-      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
-    }
-    res.json(user);
-  } catch (error) {
-    console.error('Get user error:', error);
-    res.status(500).json({ message: error.message });
-  }
+// Route kiểm tra token
+router.get('/verify-token', authenticateToken, (req, res) => {
+  res.json({ message: 'Token hợp lệ', userId: req.user.userId });
 });
 
-// Thêm route đăng xuất
-router.post('/logout', authenticateToken, async (req, res) => {
-  try {
-    const token = req.headers.authorization.split(' ')[1];
-    await req.user.removeToken(token);
-    res.json({ message: 'Đăng xuất thành công' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+// Route đăng xuất
+router.post('/logout', authenticateToken, (req, res) => {
+  res.json({ message: 'Đăng xuất thành công' });
 });
 
 module.exports = router; 
