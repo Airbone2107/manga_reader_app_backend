@@ -14,7 +14,6 @@ const authenticateToken = (req, res, next) => {
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) return res.status(403).json({ message: 'Token không hợp lệ' });
     console.log(user); // In ra thông tin người dùng đã giải mã từ token
-
     req.user = user; // Lưu thông tin user từ token
     next();
   });
@@ -76,7 +75,7 @@ router.post('/auth/google', async (req, res) => {
 router.post('/follow', authenticateToken, async (req, res) => {
   try {
     const { mangaId } = req.body; // Sử dụng req.body thay vì req.query
-    const user = await User.findById(req.user.id); // Lấy user từ token (req.user.id)
+    const user = await User.findById(req.user.userId); // Lấy user từ token (req.user.id)
 
     if (!user) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
@@ -102,7 +101,7 @@ router.post('/follow', authenticateToken, async (req, res) => {
 router.post('/unfollow', authenticateToken, async (req, res) => {
   try {
     const { mangaId } = req.body; // Sử dụng req.body thay vì req.query
-    const user = await User.findById(req.user.id); // Lấy user từ token (req.user.id)
+    const user = await User.findById(req.user.userId);// Lấy user từ token (req.user.id)
 
     if (!user) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
@@ -126,7 +125,7 @@ router.post('/unfollow', authenticateToken, async (req, res) => {
 router.post('/reading-progress', authenticateToken, async (req, res) => {
   try {
     const { mangaId, lastChapter } = req.body;
-    const user = await User.findById(req.user.id); 
+    const user = await User.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
     }
