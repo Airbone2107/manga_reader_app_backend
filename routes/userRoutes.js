@@ -130,9 +130,20 @@ router.post('/:userId/reading-progress', authenticateToken, async (req, res) => 
   }
 });
 
-// Route kiểm tra token
-router.get('/verify-token', authenticateToken, (req, res) => {
-  res.json({ message: 'Token hợp lệ', userId: req.user.userId });
+// Route lấy thông tin người dùng từ token
+router.get('/users', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+    }
+    
+    res.json(user);
+  } catch (error) {
+    console.error('Lỗi lấy thông tin người dùng:', error);
+    res.status(500).json({ message: error.message });
+  }
 });
 
 // Route đăng xuất
