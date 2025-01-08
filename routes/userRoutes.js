@@ -13,7 +13,6 @@ const authenticateToken = (req, res, next) => {
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) return res.status(403).json({ message: 'Token không hợp lệ' });
-    console.log(user); // In ra thông tin người dùng đã giải mã từ token
     req.user = user; // Lưu thông tin user từ token
     next();
   });
