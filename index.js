@@ -14,9 +14,10 @@ app.use(express.json());
 // Kết nối MongoDB
 mongoose.connect(process.env.DB_URI, {
   useNewUrlParser: true,
-  useUnifiedTopology: true
+  useUnifiedTopology: true,
+  dbName: 'NhatDex_UserDB'
 })
-.then(() => console.log('Đã kết nối với MongoDB'))
+.then(() => console.log('Đã kết nối với MongoDB - Database: NhatDex_UserDB'))
 .catch((error) => console.log('Lỗi kết nối MongoDB:', error));
 
 // Routes
