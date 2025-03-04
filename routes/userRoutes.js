@@ -138,13 +138,13 @@ router.post('/reading-progress', authenticateToken, async (req, res) => {
     if (readingIndex > -1) {
       user.readingManga[readingIndex] = {
         mangaId,
-        lastChapter: lastChapter.toString(),
+        lastChapter: parseInt(lastChapter),
         lastReadAt: new Date()
       };
     } else {
       user.readingManga.push({
         mangaId,
-        lastChapter: lastChapter.toString(),
+        lastChapter: parseInt(lastChapter),
         lastReadAt: new Date()
       });
     }

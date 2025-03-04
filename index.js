@@ -3,13 +3,17 @@ const cors = require('cors');
 require('dotenv').config();
 const mongoose = require('mongoose');
 const userRoutes = require('./routes/userRoutes');
-
+const mangadexRoutes = require('./routes/mangadexRoutes');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 // Middlewares
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 // Kết nối MongoDB
@@ -23,10 +27,17 @@ mongoose.connect(process.env.DB_URI, {
 
 // Routes
 app.use('/api/users', userRoutes);
+app.use('/api/mangadex', mangadexRoutes);
 
 // Route mặc định
 app.get('/', (req, res) => {
   res.send('Manga Reader Backend đang chạy!');
+});
+
+// Middleware xử lý lỗi
+app.use((err, req, res, next) => {
+  console.error('Server error:', err);
+  res.status(500).json({ message: 'Internal Server Error', error: err.message });
 });
 
 // Lắng nghe cổng
