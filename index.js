@@ -7,6 +7,15 @@ const mangadexRoutes = require('./routes/mangadexRoutes');
 const fs = require('fs');
 const path = require('path');
 
+// Kiểm tra các biến môi trường bắt buộc
+const requiredEnvVars = ['JWT_SECRET', 'GOOGLE_CLIENT_ID', 'DB_URI'];
+for (const envVar of requiredEnvVars) {
+  if (!process.env[envVar]) {
+    console.error(`Error: ${envVar} is not defined in environment variables`);
+    process.exit(1);
+  }
+}
+
 // Khởi tạo thư mục logs nếu chưa tồn tại
 const logDir = path.join(__dirname, 'logs');
 if (!fs.existsSync(logDir)) {
